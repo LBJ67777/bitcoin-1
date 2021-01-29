@@ -1430,9 +1430,10 @@ bool static AlreadyHaveBlock(const uint256& block_hash) EXCLUSIVE_LOCKS_REQUIRED
 
 void RelayTransaction(const uint256& txid, const uint256& wtxid, const CConnman& connman)
 {
+    // LogPrintf("Test from wkb at net_processing.cpp in RelayTrasaction Function\n");
     connman.ForEachNode([&txid, &wtxid](CNode* pnode) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
         AssertLockHeld(::cs_main);
-
+        // LogPrintf("wkb relay transaction info, txid: %s, wtxid: %s, node addr: %s\n", txid.ToString(), wtxid.ToString(), pnode->addr.ToStringIPPort());
         CNodeState* state = State(pnode->GetId());
         if (state == nullptr) return;
         if (state->m_wtxid_relay) {
@@ -4016,7 +4017,13 @@ public:
     {
         /* As std::make_heap produces a max-heap, we want the entries with the
          * fewest ancestors/highest fee to sort later. */
-        return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
+	    uint256 a1 = *a;
+        uint256 b1 = *b;
+        LogPrintf("chenzhuoTest %s, %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
+    //     // LogPrintf("chenzhuoTest comparing hasha:%d with hashb:%d, result: %d)\n", *a, *b, *b > *a);
+    //     return 1;
+    //     return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
+        return a1.ToString() < b1.ToString();
     }
 };
 }
@@ -4360,8 +4367,10 @@ bool PeerManager::SendMessages(CNode* pto)
                     // Produce a vector with all candidates for sending
                     std::vector<std::set<uint256>::iterator> vInvTx;
                     vInvTx.reserve(pto->m_tx_relay->setInventoryTxToSend.size());
+        
                     for (std::set<uint256>::iterator it = pto->m_tx_relay->setInventoryTxToSend.begin(); it != pto->m_tx_relay->setInventoryTxToSend.end(); it++) {
-                        vInvTx.push_back(it);
+                        
+						vInvTx.push_back(it);
                     }
                     CFeeRate filterrate;
                     {
@@ -4382,7 +4391,9 @@ bool PeerManager::SendMessages(CNode* pto)
                         std::set<uint256>::iterator it = vInvTx.back();
                         vInvTx.pop_back();
                         uint256 hash = *it;
+						//堆排序，拿出来一个
                         CInv inv(state.m_wtxid_relay ? MSG_WTX : MSG_TX, hash);
+				
                         // Remove it from the to-be-sent set
                         pto->m_tx_relay->setInventoryTxToSend.erase(it);
                         // Check if not in the filter already
@@ -4401,14 +4412,14 @@ bool PeerManager::SendMessages(CNode* pto)
                             continue;
                         }
                         if (pto->m_tx_relay->pfilter && !pto->m_tx_relay->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
-                        // Send
+                        LogPrintf("LQtransactionsToTelay: %s, ip: %s\n", hash.ToString(), pto->addr.ToStringIP());
+						// Send
                         State(pto->GetId())->m_recently_announced_invs.insert(hash);
                         vInv.push_back(inv);
                         nRelayedTransactions++;
                         {
                             // Expire old relay messages
-                            while (!vRelayExpiration.empty() && vRelayExpiration.front().first < count_microseconds(current_time))
-                            {
+                            while (!vRelayExpiration.empty() && vRelayExpiration.front().first < count_microseconds(current_time)){
                                 mapRelay.erase(vRelayExpiration.front().second);
                                 vRelayExpiration.pop_front();
                             }

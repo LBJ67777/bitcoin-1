@@ -1201,7 +1201,8 @@ public:
         LOCK(m_tx_relay->cs_tx_inventory);
         if (!m_tx_relay->filterInventoryKnown.contains(hash)) {
             m_tx_relay->setInventoryTxToSend.insert(hash);
-        }
+	}
+        
     }
 
     void CloseSocketDisconnect();

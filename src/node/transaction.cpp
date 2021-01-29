@@ -41,6 +41,7 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t
     LOCK(cs_main);
     // If the transaction is already confirmed in the chain, don't do anything
     // and return early.
+    // LogPrintf("Test from wkb");
     CCoinsViewCache &view = ::ChainstateActive().CoinsTip();
     for (size_t o = 0; o < tx->vout.size(); o++) {
         const Coin& existingCoin = view.AccessCoin(COutPoint(hashTx, o));
@@ -102,6 +103,6 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t
         LOCK(cs_main);
         RelayTransaction(hashTx, tx->GetWitnessHash(), *node.connman);
     }
-
+    // LogPrintf("liuyingxueBroadcasttransaction\n");
     return TransactionError::OK;
 }

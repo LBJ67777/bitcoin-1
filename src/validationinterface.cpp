@@ -15,6 +15,8 @@
 #include <future>
 #include <unordered_map>
 #include <utility>
+#include <txmempool.h>
+
 
 //! The MainSignalsInstance manages a list of shared_ptr<CValidationInterface>
 //! callbacks.
@@ -196,16 +198,17 @@ void CMainSignals::UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockInd
     ENQUEUE_AND_LOG_EVENT(event, "%s: new block hash=%s fork block hash=%s (in IBD=%s)", __func__,
                           pindexNew->GetBlockHash().ToString(),
                           pindexFork ? pindexFork->GetBlockHash().ToString() : "null",
-                          fInitialDownload);
+			  fInitialDownload);
 }
 
 void CMainSignals::TransactionAddedToMempool(const CTransactionRef& tx, uint64_t mempool_sequence) {
     auto event = [tx, mempool_sequence, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.TransactionAddedToMempool(tx, mempool_sequence); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: txid=%s wtxid=%s", __func__,
+    /*ENQUEUE_AND_LOG_EVENT(event, "LQpool%s: txid=%s wtxid=%s", __func__,
                           tx->GetHash().ToString(),
                           tx->GetWitnessHash().ToString());
+	*/
 }
 
 void CMainSignals::TransactionRemovedFromMempool(const CTransactionRef& tx, MemPoolRemovalReason reason, uint64_t mempool_sequence) {
@@ -254,3 +257,4 @@ void CMainSignals::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared
     LOG_EVENT("%s: block hash=%s", __func__, block->GetHash().ToString());
     m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.NewPoWValidBlock(pindex, block); });
 }
+

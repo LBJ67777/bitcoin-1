@@ -739,11 +739,18 @@ bool CTxMemPool::CompareDepthAndScore(const uint256& hasha, const uint256& hashb
 {
     LOCK(cs);
     indexed_transaction_set::const_iterator i = wtxid ? get_iter_from_wtxid(hasha) : mapTx.find(hasha);
-    if (i == mapTx.end()) return false;
+    auto counta = i->GetTx().ToString();
+    LogPrintf("LQJudege, Txa:%s", counta);
+    if (i == mapTx.end()) 
+        return false;
     indexed_transaction_set::const_iterator j = wtxid ? get_iter_from_wtxid(hashb) : mapTx.find(hashb);
-    if (j == mapTx.end()) return true;
-    uint64_t counta = i->GetCountWithAncestors();
-    uint64_t countb = j->GetCountWithAncestors();
+    auto countb = j->GetTx().ToString();
+    LogPrintf("LQJudege, Txb:%s", countb);
+    if (j == mapTx.end()) 
+        return true;
+    //uint64_t counta = i->GetCountWithAncestors();
+    //uint64_t countb = j->GetCountWithAncestors();
+    LogPrintf("LQJudege, Txa:%s, Txb:%s, ans:%d", counta, countb, counta < countb);
     if (counta == countb) {
         return CompareTxMemPoolEntryByScore()(*i, *j);
     }

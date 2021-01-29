@@ -46,6 +46,9 @@ static_assert(MINIUPNPC_API_VERSION >= 10, "miniUPnPc API version >= 10 assumed"
 #include <unordered_map>
 
 #include <math.h>
+#include <sstream>
+#include <iomanip>
+#include <stdio.h>
 
 /** Maximum number of block-relay-only anchor connections */
 static constexpr size_t MAX_BLOCK_RELAY_ONLY_ANCHORS = 2;
@@ -2973,7 +2976,14 @@ bool CConnman::NodeFullyConnected(const CNode* pnode)
 void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 {
     size_t nMessageSize = msg.data.size();
-    LogPrint(BCLog::NET, "sending %s (%d bytes) peer=%d\n",  SanitizeString(msg.m_type), nMessageSize, pnode->GetId());
+    std::stringstream ss;
+    ss << std::hex;
+    for(auto x : msg.data) {
+        ss << std::setw(2) << std::setfill('0') << (int)x;
+    }
+
+    LogPrint(BCLog::NET, "sending %s (%d bytes) peer=%d ip=%s msg=%s\n",  SanitizeString(msg.m_type), nMessageSize, pnode->GetId(), pnode->addr.ToStringIP(), ss.str());
+
 
     // make sure we use the appropriate network transport format
     std::vector<unsigned char> serializedHeader;

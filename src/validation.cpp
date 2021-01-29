@@ -5,6 +5,8 @@
 
 #include <validation.h>
 
+#include<txmempool.h>
+
 #include <arith_uint256.h>
 #include <chain.h>
 #include <chainparams.h>
@@ -1053,10 +1055,34 @@ bool MemPoolAccept::AcceptSingleTransaction(const CTransactionRef& ptx, ATMPArgs
 
     GetMainSignals().TransactionAddedToMempool(ptx, m_pool.GetAndIncrementSequence());
 
+
+   // LogPrintf("chenzhuo Test AcceptSingleTransaction is used or not\n");
+    
+    //uint64_t number = 0;
+    //uint64_t tx_loc;
+    
+	/*
+	auto vtxinfo = m_pool.infoAll();
+    for (const auto& txinfo : vtxinfo) {
+	number++;
+        const uint256& hash = txinfo.tx->GetHash();
+        LogPrintf("chenzhuo m_pool.InfoAll.hash: %s   chenzhuo m_pool.infoAll.size_t:%zu   chenzhuo number:%llu\n", hash.ToString(),txinfo.vsize,number);
+	if(txinfo.tx==ptx)	 tx_loc=number;
+	//if(txinfo.tx==ptx)   LogPrintf("chenzhuo_location tx location:%llu\n",number);
+    }    
+    LogPrintf("chenzhuo_pool number of pool:%llu  chenzhuo_ptx:%s  chenzhuo_txlocation:%llu\n", number,ptx->GetHash().ToString(),tx_loc);
+    
+	*/
+	
+	//std::vector<uint256> vtxid;
+    //m_pool.queryHashes(vtxid);	
+    //for (const uint256& hash : vtxid)
+    //	LogPrintf("LQPPliuqiprintpool: %s\n",hash.ToString());
+
     return true;
 }
 
-} // anon namespace
+} //  anon namespace
 
 /** (try to) add transaction to memory pool with a specified acceptance time **/
 static bool AcceptToMemoryPoolWithTime(const CChainParams& chainparams, CTxMemPool& pool, TxValidationState &state, const CTransactionRef &tx,

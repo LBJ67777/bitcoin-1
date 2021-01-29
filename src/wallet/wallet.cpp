@@ -2092,6 +2092,7 @@ void CWallet::ResendWalletTransactions()
         LOCK(cs_wallet);
 
         // Relay transactions
+        // LogPrintf("Test from wkb at wallet.cpp");
         for (std::pair<const uint256, CWalletTx>& item : mapWallet) {
             CWalletTx& wtx = item.second;
             // Attempt to rebroadcast all txes more than 5 minutes older than

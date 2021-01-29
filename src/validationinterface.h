@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 
+#include <txmempool.h>
 extern RecursiveMutex cs_main;
 class BlockValidationState;
 class CBlock;
@@ -22,6 +23,7 @@ class CValidationInterface;
 class uint256;
 class CScheduler;
 enum class MemPoolRemovalReason;
+
 
 /** Register subscriber */
 void RegisterValidationInterface(CValidationInterface* callbacks);
