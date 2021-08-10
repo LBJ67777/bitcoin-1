@@ -33,7 +33,7 @@
 
 #include <memory>
 #include <typeinfo>
-
+// static const char *str = "0123456789abcdef";
 /** Expiration time for orphan transactions in seconds */
 static constexpr int64_t ORPHAN_TX_EXPIRE_TIME = 20 * 60;
 /** Minimum time between orphan transactions expire time checks in seconds */
@@ -4017,13 +4017,11 @@ public:
     {
         /* As std::make_heap produces a max-heap, we want the entries with the
          * fewest ancestors/highest fee to sort later. */
-	    uint256 a1 = *a;
-        uint256 b1 = *b;
-        LogPrintf("chenzhuoTest %s, %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
-    //     // LogPrintf("chenzhuoTest comparing hasha:%d with hashb:%d, result: %d)\n", *a, *b, *b > *a);
-    //     return 1;
-    //     return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
-        return a1.ToString() < b1.ToString();
+	//uint256 a1 = *a;
+        //uint256 b1 = *b;
+        //LogPrintf("chenzhuoTest %s, %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
+        return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
+        //return a1.ToString() < b1.ToString();
     }
 };
 }
@@ -4294,6 +4292,9 @@ bool PeerManager::SendMessages(CNode* pto)
         // Message: inventory
         //
         std::vector<CInv> vInv;
+	//局部变量
+	//int flag = 0;
+	//LogPrinf("LQStart\n");
         {
             LOCK(pto->cs_inventory);
             vInv.reserve(std::max<size_t>(pto->vInventoryBlockToSend.size(), INVENTORY_BROADCAST_MAX));
@@ -4302,7 +4303,8 @@ bool PeerManager::SendMessages(CNode* pto)
             for (const uint256& hash : pto->vInventoryBlockToSend) {
                 vInv.push_back(CInv(MSG_BLOCK, hash));
                 if (vInv.size() == MAX_INV_SZ) {
-                    m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                   //sleep(10);
+		       	m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                     vInv.clear();
                 }
             }
@@ -4385,13 +4387,16 @@ bool PeerManager::SendMessages(CNode* pto)
                     // especially since we have many peers and some will draw much shorter delays.
                     unsigned int nRelayedTransactions = 0;
                     LOCK(pto->m_tx_relay->cs_filter);
-                    while (!vInvTx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX) {
-                        // Fetch the top element from the heap
+                    //flag变量 不行
+		    
+		  
+		    while (!vInvTx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX) {
+			 // Fetch the top element from the heap
                         std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                         std::set<uint256>::iterator it = vInvTx.back();
                         vInvTx.pop_back();
                         uint256 hash = *it;
-						//堆排序，拿出来一个
+			//堆排序，拿出来一个
                         CInv inv(state.m_wtxid_relay ? MSG_WTX : MSG_TX, hash);
 				
                         // Remove it from the to-be-sent set
@@ -4411,8 +4416,58 @@ bool PeerManager::SendMessages(CNode* pto)
                         if (txinfo.fee < filterrate.GetFee(txinfo.vsize)) {
                             continue;
                         }
-                        if (pto->m_tx_relay->pfilter && !pto->m_tx_relay->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
-                        LogPrintf("LQtransactionsToTelay: %s, ip: %s\n", hash.ToString(), pto->addr.ToStringIP());
+						if (pto->m_tx_relay->pfilter && !pto->m_tx_relay->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
+			
+						/*
+						//二进制
+						LogPrintf("LQflag[%d] = %c, type1:%s, type2:%s\n",pto->flag, str[pto->flag], typeid(str[pto->flag]).name(), typeid('0').name());
+							if (str[pto->flag] == '0') {
+								LogPrintf("LQstr[flag]:%c == '0'\n", str[pto->flag]);
+								if (hash.ToString()[0] >= '0' && hash.ToString()[0]<='7') {
+									LogPrintf("LQSuccess:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+									pto->flag++;
+									pto->flag %= strlen(str);
+								} else {
+									LogPrintf("LQFail:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+								continue;
+								}
+							} else {
+								LogPrintf("LQstr[flag]:%c == '1'\n",str[pto->flag]);
+								if (hash.ToString()[0] >= '0' && hash.ToString()[0]<='7') {
+									LogPrintf("LQFail:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+									continue;
+								} else {
+									LogPrintf("LQSuccess:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
+									pto->flag++;
+									pto->flag %= strlen(str);
+								}
+							}
+						*/
+						/*
+							//十六进制Inv
+							LogPrintf("LQflag[%d] = %c, type1:%s, type2:%s\n",pto->flag, str[pto->flag], typeid(str[pto->flag]).name(), typeid('0').name());
+							if(str[pto->flag] != hash.ToString()[0])
+								continue;
+							if(str[pto->flag] == hash.ToString()[0]){
+								LogPrintf("LQSuccess:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
+								pto->flag++;
+                                pto->flag %= strlen(str);
+							}
+						*/
+						/*
+						//Inv分段发送CTC方案+十六进制Inv
+						if(pto->addr.ToStringIP() == "47.57.121.202"){	
+							LogPrintf("LQflag[%d] = %c, type1:%s, type2:%s\n",pto->flag, str[pto->flag], typeid(str[pto->flag]).name(), typeid('0').name());
+							if(str[pto->flag] != hash.ToString()[0])
+								continue;
+							if(str[pto->flag] == hash.ToString()[0]){
+								LogPrintf("LQSuccess:%s,ip:%s,LQflag[%d] = %c\n", hash.ToString(), pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
+								pto->flag++;
+                                pto->flag %= strlen(str);
+							}
+						}*/
+                        // LogPrintf("LQtransactionsToRelay: %s, ip: %s\n, flag: %d", hash.ToString(), pto->addr.ToStringIP(),flag);
+						//LogPrintf("LQstr: %s\n", str);
 						// Send
                         State(pto->GetId())->m_recently_announced_invs.insert(hash);
                         vInv.push_back(inv);
@@ -4435,7 +4490,11 @@ bool PeerManager::SendMessages(CNode* pto)
                             }
                         }
                         if (vInv.size() == MAX_INV_SZ) {
-                            m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+			   // printf("sleep before");
+			   // sleep(10);
+			   // printf("sleep after");
+
+			    m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                             vInv.clear();
                         }
                         pto->m_tx_relay->filterInventoryKnown.insert(hash);
@@ -4451,9 +4510,10 @@ bool PeerManager::SendMessages(CNode* pto)
                 }
             }
         }
-        if (!vInv.empty())
-            m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
-
+        if (!vInv.empty()){
+	  //     	sleep(10);
+		m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+	}
         // Detect whether we're stalling
         current_time = GetTime<std::chrono::microseconds>();
         if (state.nStallingSince && state.nStallingSince < count_microseconds(current_time) - 1000000 * BLOCK_STALLING_TIMEOUT) {
@@ -4549,7 +4609,13 @@ bool PeerManager::SendMessages(CNode* pto)
         }
         for (const GenTxid& gtxid : requestable) {
             if (!AlreadyHaveTx(gtxid, m_mempool)) {
-                LogPrint(BCLog::NET, "Requesting %s %s peer=%d\n", gtxid.IsWtxid() ? "wtx" : "tx",
+		    /*
+		if(gtxid.GetHash().ToString()[0] != str[pto->flag])	continue;
+		pto->flag++;
+                pto->flag %= strlen(str);
+		LogPrintf("LQGetdata:%s,ip:%s,LQflag[%d] = %c\n", gtxid.GetHash().ToString(), pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
+               */
+		LogPrint(BCLog::NET, "Requesting %s %s peer=%d\n", gtxid.IsWtxid() ? "wtx" : "tx",
                     gtxid.GetHash().ToString(), pto->GetId());
                 vGetData.emplace_back(gtxid.IsWtxid() ? MSG_WTX : (MSG_TX | GetFetchFlags(*pto)), gtxid.GetHash());
                 if (vGetData.size() >= MAX_GETDATA_SZ) {
@@ -4621,3 +4687,4 @@ public:
     }
 };
 static CNetProcessingCleanup instance_of_cnetprocessingcleanup;
+

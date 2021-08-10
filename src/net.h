@@ -850,7 +850,7 @@ class CNode
 public:
     std::unique_ptr<TransportDeserializer> m_deserializer;
     std::unique_ptr<TransportSerializer> m_serializer;
-
+    int flag=0;
     // socket
     std::atomic<ServiceFlags> nServices{NODE_NONE};
     SOCKET hSocket GUARDED_BY(cs_hSocket);
@@ -987,6 +987,7 @@ protected:
     mapMsgCmdSize mapRecvBytesPerMsgCmd GUARDED_BY(cs_vRecv);
 
 public:
+    // int flag = 0;
     uint256 hashContinue;
     std::atomic<int> nStartingHeight{-1};
 
