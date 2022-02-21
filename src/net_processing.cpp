@@ -33,7 +33,7 @@
 
 #include <memory>
 #include <typeinfo>
-// static const char *str = "0123456789abcdef";
+static const char *str = "0000000000101010101001010011111111111";
 /** Expiration time for orphan transactions in seconds */
 static constexpr int64_t ORPHAN_TX_EXPIRE_TIME = 20 * 60;
 /** Minimum time between orphan transactions expire time checks in seconds */
@@ -2274,7 +2274,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                                          const std::chrono::microseconds time_received,
                                          const std::atomic<bool>& interruptMsgProc)
 {
-    LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom.GetId());
+    LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d,ip=%s\n", SanitizeString(msg_type), vRecv.size(), pfrom.GetId(),pfrom.addr.ToStringIP());
     if (gArgs.IsArgSet("-dropmessagestest") && GetRand(gArgs.GetArg("-dropmessagestest", 0)) == 0)
     {
         LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
@@ -4003,7 +4003,7 @@ void PeerManager::CheckForStaleTipAndEvictPeers()
 
 namespace {
 class CompareInvMempoolOrder
-{
+{	
     CTxMemPool *mp;
     bool m_wtxid_relay;
 public:
@@ -4016,13 +4016,46 @@ public:
     bool operator()(std::set<uint256>::iterator a, std::set<uint256>::iterator b)
     {
         /* As std::make_heap produces a max-heap, we want the entries with the
-         * fewest ancestors/highest fee to sort later. */
-	//uint256 a1 = *a;
-        //uint256 b1 = *b;
+         * fewest ancestors/highest fee to sort later. 
+		 降序*/
+        uint256 a1 = *a;
+        uint256 b1 = *b;
+		LogPrintf("LQSort:%s %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
+		return a1.ToString() < b1.ToString();
         //LogPrintf("chenzhuoTest %s, %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
-        return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
+        //return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
         //return a1.ToString() < b1.ToString();
     }
+};
+}
+
+namespace {
+class CompareInvSort
+{	
+    CTxMemPool *mp;
+    bool m_wtxid_relay;
+public:
+    explicit CompareInvSort(CTxMemPool *_mempool, bool use_wtxid)
+    {
+        mp = _mempool;
+        m_wtxid_relay = use_wtxid;
+    }
+
+    bool operator()(std::set<uint256>::iterator a, std::set<uint256>::iterator b)
+    {
+        /* As std::make_heap produces a max-heap, we want the entries with the
+         * fewest ancestors/highest fee to sort later.
+		 shengxu */
+        
+		uint256 a1 = *a;
+        uint256 b1 = *b;
+		LogPrintf("LQSort:%s %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() > b1.ToString());
+		return a1.ToString() > b1.ToString();
+        //LogPrintf("chenzhuoTest %s, %s, %s\n", a1.ToString(), b1.ToString(), a1.ToString() < b1.ToString());
+        //return mp->CompareDepthAndScore(*b, *a, m_wtxid_relay);
+        //return a1.ToString() < b1.ToString();
+    }
+	
 };
 }
 
@@ -4381,8 +4414,17 @@ bool PeerManager::SendMessages(CNode* pto)
                     }
                     // Topologically and fee-rate sort the inventory we send for privacy and priority reasons.
                     // A heap is used so that not all items need sorting if only a few are being sent.
-                    CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool, state.m_wtxid_relay);
-                    std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
+					if (str[pto->flag] == '0') {//降序
+						CompareInvMempoolOrder compare(&m_mempool, state.m_wtxid_relay);
+						std::make_heap(vInvTx.begin(), vInvTx.end(), compare);
+						LogPrintf("LQmake:ip:%s,LQflag[%d] = %c\n", pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+					}else {
+						CompareInvSort compare(&m_mempool, state.m_wtxid_relay);
+						std::make_heap(vInvTx.begin(), vInvTx.end(), compare);
+						LogPrintf("LQmake:ip:%s,LQflag[%d] = %c\n", pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+					}
+                    //CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool, state.m_wtxid_relay);
+                    //std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                     // No reason to drain out at many times the network's capacity,
                     // especially since we have many peers and some will draw much shorter delays.
                     unsigned int nRelayedTransactions = 0;
@@ -4391,8 +4433,19 @@ bool PeerManager::SendMessages(CNode* pto)
 		    
 		  
 		    while (!vInvTx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX) {
-			 // Fetch the top element from the heap
-                        std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
+			 // Fetch the top element from the heap 35
+						
+						if (str[pto->flag] == '0') {
+							CompareInvMempoolOrder compare(&m_mempool, state.m_wtxid_relay);
+							std::make_heap(vInvTx.begin(), vInvTx.end(), compare);
+							std::pop_heap(vInvTx.begin(), vInvTx.end(), compare);
+						}else {
+							CompareInvSort compare(&m_mempool, state.m_wtxid_relay);
+							std::make_heap(vInvTx.begin(), vInvTx.end(), compare);
+							std::pop_heap(vInvTx.begin(), vInvTx.end(), compare);
+						}
+						
+                        //std::pop_heap(vInvTx.begin(), vInvTx.end(), compare);
                         std::set<uint256>::iterator it = vInvTx.back();
                         vInvTx.pop_back();
                         uint256 hash = *it;
@@ -4443,8 +4496,8 @@ bool PeerManager::SendMessages(CNode* pto)
 								}
 							}
 						*/
-						/*
 							//十六进制Inv
+							/*
 							LogPrintf("LQflag[%d] = %c, type1:%s, type2:%s\n",pto->flag, str[pto->flag], typeid(str[pto->flag]).name(), typeid('0').name());
 							if(str[pto->flag] != hash.ToString()[0])
 								continue;
@@ -4453,7 +4506,7 @@ bool PeerManager::SendMessages(CNode* pto)
 								pto->flag++;
                                 pto->flag %= strlen(str);
 							}
-						*/
+							*/
 						/*
 						//Inv分段发送CTC方案+十六进制Inv
 						if(pto->addr.ToStringIP() == "47.57.121.202"){	
@@ -4465,9 +4518,16 @@ bool PeerManager::SendMessages(CNode* pto)
 								pto->flag++;
                                 pto->flag %= strlen(str);
 							}
-						}*/
+						}
+						*/
                         // LogPrintf("LQtransactionsToRelay: %s, ip: %s\n, flag: %d", hash.ToString(), pto->addr.ToStringIP(),flag);
 						//LogPrintf("LQstr: %s\n", str);
+						
+						LogPrintf("LQSuccess: %s，ip:%s,LQflag[%d] = %c\n",hash.ToString(),pto->addr.ToStringIP(),pto->flag, str[pto->flag]);
+						pto->flag++;
+						pto->flag %= strlen(str);
+						
+						
 						// Send
                         State(pto->GetId())->m_recently_announced_invs.insert(hash);
                         vInv.push_back(inv);
@@ -4493,8 +4553,15 @@ bool PeerManager::SendMessages(CNode* pto)
 			   // printf("sleep before");
 			   // sleep(10);
 			   // printf("sleep after");
-
-			    m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                            if(pto->flag == 0){
+                                pto->flag = strlen(str) - 1;
+                            }else{
+                            pto->flag--;
+                            pto->flag %= strlen(str);
+                            }
+                            
+                            LogPrintf("LQSuccessdelete1: ip:%s,LQflag[%d]= %c \n",pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
+							m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                             vInv.clear();
                         }
                         pto->m_tx_relay->filterInventoryKnown.insert(hash);
@@ -4511,6 +4578,14 @@ bool PeerManager::SendMessages(CNode* pto)
             }
         }
         if (!vInv.empty()){
+    
+                            if(pto->flag == 0){
+                                pto->flag = strlen(str)-1;
+                            }else{
+                            pto->flag--;
+                            pto->flag %= strlen(str);
+                            }
+            LogPrintf("LQSuccessdelete2: ip:%s,LQflag[%d]= %c \n",pto->addr.ToStringIP(),pto->flag,str[pto->flag]);
 	  //     	sleep(10);
 		m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
 	}
@@ -4687,4 +4762,3 @@ public:
     }
 };
 static CNetProcessingCleanup instance_of_cnetprocessingcleanup;
-
